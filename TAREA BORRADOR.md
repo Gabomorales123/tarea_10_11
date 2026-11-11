@@ -14,10 +14,10 @@
 #  lectura de las exportaciones .csv del SedLine y de la CRF (SECCIÓN 3).
 #
 #  Correspondencia con los objetivos específicos (OE) de la propuesta:
-#    OE1 Evolución horaria de PSI, SR, SEF95, EMG, ARTF (T0-T30) por grupo -> §5
-#    OE2 Asociación intra-animal SedLine-esfuerzo (T18-T30)               -> §6-7
+#    OE1 Evolución horaria de PSI y SEF95 (principales) y SR, EMG, ARTF (complementarias) -> §5
+#    OE2 Asociación intra-animal PSI/SEF95-esfuerzo (T18-T30)               -> §6-7
 #    OE3 Comparación exploratoria entre grupos                            -> §7
-#    OE4 Asociación SedLine - cambio de PdiTw (T30/T18)                   -> §8
+#    OE4 Asociación PSI/SEF95 - cambio de PdiTw (T30/T18)                   -> §8
 #    OE5 Artefactos, contaminación por ECG y pérdida de datos             -> §4, §9
 #
 #  Alcance: estudio observacional y exploratorio (n = 21; 7 por grupo).
@@ -375,7 +375,7 @@ p_desc <- ggplot(desc, aes(hora, mediana, colour = grupo, fill = grupo)) +
   geom_line(linewidth = 0.8) +
   geom_vline(xintercept = P$hora_transicion, linetype = "dashed") +
   facet_wrap(~ variable, scales = "free_y") +
-  labs(title = "Evolución horaria de las variables SedLine (mediana y RIC)",
+  labs(title = "Evolución horaria de PSI y SEF95 (principales) y variables complementarias (mediana y RIC)",
        subtitle = ETIQUETA, x = "Hora (T0-T30)", y = NULL,
        caption = "Línea discontinua: T18, inicio de la fase de transición") +
   theme_minimal()
@@ -461,7 +461,7 @@ contrastes_grupo <- function(m, nombre, horas = c(2, 11)) {
            d_IC95_sup = upper.CL / sd_total)
 }
 
-vars_lmm <- c("PSI", "SEF95", "EMG")
+vars_lmm <- c("PSI", "SEF95", "EMG")   # PSI y SEF95: principales; EMG: complementaria
 modelos  <- list()
 tab_lmm  <- list()
 tab_ctr  <- list()
@@ -508,7 +508,8 @@ pdi <- pditw %>%
 expo <- trans %>%
   group_by(animal_id) %>%
   summarise(PSI_medio = mean(PSI, na.rm = TRUE),
-            EMG_medio = mean(EMG, na.rm = TRUE),
+            SEF95_medio = mean(SEF95, na.rm = TRUE),
+            EMG_medio = mean(EMG, na.rm = TRUE),   # complementaria
             PTP_medio = mean(PTPmin, na.rm = TRUE), .groups = "drop")
 
 d_pdi <- pdi %>% inner_join(expo, by = "animal_id") %>%
@@ -528,7 +529,8 @@ spearman_boot <- function(x, y, B = 2000) {
 
 res_pdi <- bind_rows(
   spearman_boot(d_pdi$PSI_medio, d_pdi$ratio) %>% mutate(x = "PSI_medio"),
-  spearman_boot(d_pdi$EMG_medio, d_pdi$ratio) %>% mutate(x = "EMG_medio")
+  spearman_boot(d_pdi$SEF95_medio, d_pdi$ratio) %>% mutate(x = "SEF95_medio"),
+  spearman_boot(d_pdi$EMG_medio, d_pdi$ratio) %>% mutate(x = "EMG_medio (complementaria)")
 ) %>% mutate(y = "PdiTw T30/T18")
 guardar_tabla(res_pdi, "pditw_spearman")
 
